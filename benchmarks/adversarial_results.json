@@ -1,0 +1,26 @@
+{
+  "cases": [
+    {
+      "case": "renamed-producer",
+      "expected_root": "loader.py",
+      "agent_top": [
+        "loader.py"
+      ],
+      "pass": true
+    },
+    {
+      "case": "vague-on-detector-rich",
+      "expected": "abstain (inconclusive)",
+      "agent_status": "inconclusive",
+      "pass": true
+    },
+    {
+      "case": "crafted-filename",
+      "expected": "no markup/handler injection in graph data",
+      "pass": true
+    }
+  ],
+  "passed": 3,
+  "total": 3,
+  "note": "adversarial suite; separate from benchmarks/results.json; deterministic mode, $0 model spend"
+}

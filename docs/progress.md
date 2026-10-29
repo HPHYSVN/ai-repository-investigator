@@ -1,9 +1,9 @@
 # Progress Log
 
 ## 2026-10-29 — Phase A: reconnaissance + persistent memory (done)
-- Inspected `/home/phamthuoi`: home directory, not a git repo, no existing
+- Inspected `the developer's home directory`: home directory, not a git repo, no existing
   hackathon project; all existing files preserved untouched.
-- Created project at `/home/phamthuoi/ai-repository-investigator` with:
+- Created project at `the project root (this repository)` with:
   `AGENTS.md`, `docs/{progress,architecture,decisions,demo-script}.md`, and
   OpenCode V2 skills `.opencode/skills/{repository-investigation,
   evidence-verification,benchmark-testing}/SKILL.md`.
@@ -62,3 +62,34 @@
 - Manual E2E: server health + `/api/investigate` on `sample_repo` returned
   `verified`, root file `cart.py`, path pricing→checkout→cart, citations
   valid, real pytest exit code 1 (planted bug).
+
+## 2026-10-29 — Security hardening from docs/review-findings.md
+- **H1 (XSS) fixed:** frontend has no inline event handlers; repo-derived
+  values reach the DOM via `data-*` attributes + `addEventListener`, and
+  `esc()` now escapes quotes for attribute context (`app/static/index.html`).
+- **H2 (code execution) fixed to the review's minimum bar and beyond:**
+  test execution is off by default, needs a UI confirm dialog /
+  `test_execution_confirmed=true`, is rejected when
+  `INVESTIGATOR_DISABLE_TEST_EXECUTION=1`, repo paths are validated
+  (existing dir, optional `INVESTIGATOR_ALLOWED_ROOTS` confinement), and
+  the pytest subprocess gets a secret-stripped env + `PYTHONDONTWRITEBYTECODE`
+  (`app/server.py:validate_investigate_request`, `app/investigate.py`).
+  Still NOT OS-sandboxed — documented prominently in README/UI.
+- **H3 fixed without name heuristics:** the `parse*`-gated detector was
+  replaced by a producer/caller data-flow check (unconverted return +
+  caller arithmetic), any function name (`missing_conversion_hits`).
+- **H4 fixed:** non-specific queries abstain regardless of detector hits
+  (specificity now also requires terms to actually occur in the repo);
+  new `abstention-gate` step records when hits are deliberately ignored.
+- Also: M1 real demo stack-trace lines; M2 "dependency path" wording and
+  softened propagation claims; M3 citation-validity meaning stated in API,
+  benchmark, and README; M4 pattern-based secret redaction before model
+  synthesis; M5 adapter HTTP tests vs a local stub + 429 retry + unknown-
+  pricing budget block; L1 dead `output_text` branch removed; false
+  `.get` call edges removed (review §B); benchmark fixtures run from temp
+  copies (L3). Adversarial cases are a separate suite
+  (`benchmarks/run_adversarial.py`), original benchmark untouched.
+- **Measured after hardening:** `python3 -m pytest tests/ -q` → **25 passed**;
+  original benchmark agent **5/5** vs baseline **1/5**, citation validity
+  **1.0** (existence/range/hash meaning); adversarial **3/3**; $0 spend.
+- **Live Meta inference remains UNVERIFIED** (no real key available).

@@ -4,10 +4,10 @@ Format: dated, ADR-style. `Confirmed` = verified fact or explicit user instructi
 `Assumption` = unverified, must be checked before it drives implementation.
 
 ## 2026-10-29 — Phase A reconnaissance
-- **Confirmed:** `/home/phamthuoi` is the user's home directory, not a git repo,
+- **Confirmed:** `the developer's home directory` is the user's home directory, not a git repo,
   with no pre-existing project for this hackathon. `~/Projects` is empty.
   Existing files were left untouched.
-- **Decision:** Project created at `/home/phamthuoi/ai-repository-investigator`.
+- **Decision:** Project created at `the project root (this repository)`.
   Rationale: isolated, clearly named, does not pollute or overwrite home-dir files.
 - **Confirmed (tooling):** Python 3.14.8, Node v26.12.1, npm 12.2.1, git 2.56.0,
   `rg`, `fd`, OpenCode v2.1.4; 12 CPUs, 15 GiB RAM, ~105 GiB free disk.
@@ -51,3 +51,15 @@ Format: dated, ADR-style. `Confirmed` = verified fact or explicit user instructi
   `INVESTIGATOR_MAX_MODEL_CALLS` (default 2), `INVESTIGATOR_BUDGET_USD`
   (default 1.00). Contributor-mode models are NOT used (they allow training
   on prompts/code).
+
+## 2026-10-29 — Security hardening (per docs/review-findings.md)
+- **Decision:** Test execution requires explicit per-request confirmation
+  (`test_execution_confirmed=true` / UI confirm dialog), defaults off, and
+  honours `INVESTIGATOR_DISABLE_TEST_EXECUTION=1`. No OS sandbox is claimed;
+  the risk is disclosed in README/UI instead. Rationale: a sandbox is out of
+  scope for this stack, but silent/default-on execution was the actual defect.
+- **Decision:** `missing_conversion` is detected from producer+caller AST
+  evidence, never from function names (H3); vague queries abstain even when
+  detectors fire (H4). Heuristics that cannot be evidenced are not added.
+- **Decision:** Model calls with unknown pricing block further calls in the
+  same adapter instance, so the budget cap cannot be bypassed (M5).

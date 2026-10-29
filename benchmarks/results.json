@@ -4,8 +4,9 @@
     "agent_root_cause_accuracy": 1.0,
     "baseline_root_cause_accuracy": 0.2,
     "citation_validity": 1.0,
+    "citation_validity_meaning": "citations exist, are in range, and hash-match indexed content; not a semantic-correctness measure (review M3)",
     "model_spend_usd": 0,
-    "note": "deterministic mode; no MODEL_API_KEY configured during run"
+    "note": "deterministic mode; no MODEL_API_KEY configured during run; fixtures run from temp copies"
   },
   "cases": [
     {
@@ -20,7 +21,8 @@
       ],
       "citations_valid": {
         "citations_checked": 1,
-        "citations_total": 1
+        "citations_total": 1,
+        "meaning": "each citation's file exists, line range is in bounds, and its SHA-256 snippet hash matches the indexed content; this does not prove the cited lines semantically establish the claim"
       },
       "tests_run": 1,
       "test_exit_codes": [
@@ -43,14 +45,15 @@
       ],
       "citations_valid": {
         "citations_checked": 3,
-        "citations_total": 3
+        "citations_total": 3,
+        "meaning": "each citation's file exists, line range is in bounds, and its SHA-256 snippet hash matches the indexed content; this does not prove the cited lines semantically establish the claim"
       },
       "tests_run": 1,
       "test_exit_codes": [
         1
       ],
       "model_calls": 0,
-      "latency_s": 0.494
+      "latency_s": 0.49
     },
     {
       "case": "config_mismatch",
@@ -66,7 +69,8 @@
       ],
       "citations_valid": {
         "citations_checked": 2,
-        "citations_total": 2
+        "citations_total": 2,
+        "meaning": "each citation's file exists, line range is in bounds, and its SHA-256 snippet hash matches the indexed content; this does not prove the cited lines semantically establish the claim"
       },
       "tests_run": 1,
       "test_exit_codes": [
@@ -90,14 +94,15 @@
       ],
       "citations_valid": {
         "citations_checked": 3,
-        "citations_total": 3
+        "citations_total": 3,
+        "meaning": "each citation's file exists, line range is in bounds, and its SHA-256 snippet hash matches the indexed content; this does not prove the cited lines semantically establish the claim"
       },
       "tests_run": 1,
       "test_exit_codes": [
         1
       ],
       "model_calls": 0,
-      "latency_s": 0.5
+      "latency_s": 0.486
     },
     {
       "case": "null_cross_file",
@@ -114,14 +119,15 @@
       ],
       "citations_valid": {
         "citations_checked": 4,
-        "citations_total": 4
+        "citations_total": 4,
+        "meaning": "each citation's file exists, line range is in bounds, and its SHA-256 snippet hash matches the indexed content; this does not prove the cited lines semantically establish the claim"
       },
       "tests_run": 1,
       "test_exit_codes": [
         1
       ],
       "model_calls": 0,
-      "latency_s": 0.489
+      "latency_s": 0.487
     }
   ]
 }

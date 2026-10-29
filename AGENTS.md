@@ -19,8 +19,8 @@ RAG chatbot. Investigation is structured state, not just a chat transcript.
 - Skills: `.opencode/skills/{repository-investigation,evidence-verification,benchmark-testing}/SKILL.md`
 
 ## Verified environment facts (2026-10-29, Phase A)
-- Project root: `/home/phamthuoi/ai-repository-investigator` (created fresh; parent
-  `/home/phamthuoi` is a home dir, NOT a git repo, and is not the project).
+- Project root: `the project root (this repository)` (created fresh; parent
+  `the developer's home directory` is a home dir, NOT a git repo, and is not the project).
 - Python 3.14.8, Node v26.12.1, npm 12.2.1, git 2.56.0, `rg`, `fd`, OpenCode v2.1.4.
 - 12 CPUs, 15 GiB RAM, ~105 GiB free disk.
 - Meta provider as seen by OpenCode: only `meta/muse-wonder-1.0` listed

@@ -5,7 +5,7 @@ Expected answers live in benchmarks/expected/ and are NEVER passed to the
 agent — the agent only receives fixture dir + query string.
 Writes benchmarks/results.json with measured values only.
 """
-import json, os, sys, time
+import json, os, shutil, sys, tempfile, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -18,7 +18,10 @@ def main():
     total_cites, valid_cites = 0, 0
     for name in sorted(os.listdir(exp_dir)):
         exp = json.load(open(os.path.join(exp_dir, name)))
-        fixture = os.path.join(ROOT, "benchmarks", "fixtures", exp["case"])
+        fixture_src = os.path.join(ROOT, "benchmarks", "fixtures", exp["case"])
+        # run against a temp copy so pytest never mutates the tracked tree (L3)
+        fixture = os.path.join(tempfile.mkdtemp(prefix="bench_"), exp["case"])
+        shutil.copytree(fixture_src, fixture)
         t0 = time.time()
         res = run_investigation(fixture, exp["query"], run_tests=True)
         latency = round(time.time() - t0, 3)
@@ -48,7 +51,8 @@ def main():
     summary = {"cases": n, "agent_root_cause_accuracy": correct_agent / n,
                "baseline_root_cause_accuracy": correct_base / n,
                "citation_validity": (valid_cites / total_cites) if total_cites else 1.0,
-               "model_spend_usd": 0, "note": "deterministic mode; no MODEL_API_KEY configured during run"}
+               "citation_validity_meaning": "citations exist, are in range, and hash-match indexed content; not a semantic-correctness measure (review M3)",
+               "model_spend_usd": 0, "note": "deterministic mode; no MODEL_API_KEY configured during run; fixtures run from temp copies"}
     out = {"summary": summary, "cases": cases}
     with open(os.path.join(ROOT, "benchmarks", "results.json"), "w") as f:
         json.dump(out, f, indent=2)
