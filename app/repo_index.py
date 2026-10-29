@@ -110,11 +110,12 @@ class RepoIndex:
                                  child.lineno, getattr(child, "end_lineno", child.lineno))
                     if kind == "function":
                         for n in ast.walk(child):
-                            if isinstance(n, ast.Call):
-                                f = n.func
-                                name = f.id if isinstance(f, ast.Name) else getattr(f, "attr", None)
-                                if name:
-                                    sym.calls.append(name)
+                            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name):
+                                # Only plain name calls are resolved into call edges.
+                                # Attribute calls (obj.method()) are NOT resolved by
+                                # name: doing so produced false edges (e.g. dict.get
+                                # -> any function named "get"). See docs/review-findings.md B.
+                                sym.calls.append(n.func.id)
                             elif isinstance(n, ast.Return):
                                 if isinstance(n.value, ast.Constant) and n.value.value is None:
                                     sym.returns_none = True

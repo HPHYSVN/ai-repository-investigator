@@ -7,10 +7,10 @@ from app.repo_index import RepoIndex
 from app.model_adapter import MetaAdapter, ModelError
 
 SAMPLE = os.path.join(ROOT, "sample_repo")
-QUERY = ('Traceback (most recent call last):\n'
-         '  File "checkout.py", line 14, in checkout_total\n'
+QUERY = ('Traceback (most recent call last):\n'  # real sample_repo line numbers (M1)
+         '  File "checkout.py", line 6, in checkout_total\n'
          '    return format_price(cart_total(items))\n'
-         '  File "pricing.py", line 9, in format_price\n'
+         '  File "pricing.py", line 2, in format_price\n'
          '    return f"${amount:.2f}"\n'
          'TypeError: unsupported format string passed to NoneType')
 

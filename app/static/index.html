@@ -34,12 +34,12 @@ svg{width:100%;height:300px;background:#0b1220;border:1px solid var(--line);bord
 <label>Local repository path</label><input id="repo" placeholder="/path/to/repo">
 <label>Bug report or stack trace</label>
 <textarea id="query">Traceback (most recent call last):
-  File "checkout.py", line 14, in checkout_total
+  File "checkout.py", line 6, in checkout_total
     return format_price(cart_total(items))
-  File "pricing.py", line 9, in format_price
+  File "pricing.py", line 2, in format_price
     return f"${amount:.2f}"
 TypeError: unsupported format string passed to NoneType</textarea>
-<label class="row" style="text-transform:none;letter-spacing:0"><input type="checkbox" id="tests" checked style="width:auto"> Run targeted existing tests (allow-listed pytest, 60s timeout)</label>
+<label class="row" style="text-transform:none;letter-spacing:0"><input type="checkbox" id="tests" style="width:auto"> Run targeted existing tests — <b>this executes repository code with your privileges; it is not sandboxed. Only enable for repos you trust.</b></label>
 <button id="go">Investigate</button>
 <p class="small">Deterministic tools first: git/file/symbol search, AST detectors, import/call graph, BM25. Meta Model API is used only for final synthesis when <code>MODEL_API_KEY</code> is set server-side. Investigation never modifies the repo; patches are proposed diffs only.</p>
 <div class="card"><h3>Steps (real tool calls only)</h3><div id="steps"><span class="small">Not run yet.</span></div></div>
@@ -55,12 +55,17 @@ TypeError: unsupported format string passed to NoneType</textarea>
 <script>
 const $=id=>document.getElementById(id);
 fetch('/api/health').then(r=>r.json()).then(h=>{$('mode').textContent=h.mode;$('mode').className='badge'+(h.model_configured?' on':'');$('repo').value=h.default_repo;});
-let result=null;
-function esc(s){return String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+let result=null, graphNodes=[];
+// Escape for BOTH text and attribute contexts (quotes included). Repo-derived
+// values are never interpolated into inline event handlers (review H1).
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function showSource(file,line){if(!result)return;const e=result.evidence.find(x=>x.file===file&&x.start<=line&&x.end>=line)||result.evidence.find(x=>x.file===file);
  $('src').innerHTML=e?`<pre>${esc(e.file)}:${e.start}-${e.end} [${e.kind}] ${esc(e.label)}\n${esc(e.text)}</pre>`:`<pre>No recorded evidence snippet for ${esc(file)}.</pre>`;}
 $('go').onclick=async()=>{$('go').disabled=true;$('stat').textContent='investigating…';
- try{const r=await fetch('/api/investigate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo:$('repo').value,query:$('query').value,run_tests:$('tests').checked})});
+ const wantTests=$('tests').checked;
+ if(wantTests && !confirm('Run tests in this repository?\n\nThis EXECUTES code from:\n'+$('repo').value+'\n\nIt runs with your user privileges and is NOT sandboxed. Only continue for a repository you trust.')){
+   $('tests').checked=false;$('go').disabled=false;$('stat').textContent='test execution not confirmed — investigation cancelled';return;}
+ try{const r=await fetch('/api/investigate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo:$('repo').value,query:$('query').value,run_tests:wantTests,test_execution_confirmed:wantTests})});
  result=await r.json();if(result.error){$('report').innerHTML='<span class=err>'+esc(result.error)+'</span>';return;}
  $('stat').textContent=`status: ${result.status} · ${result.files_indexed} files indexed, ${result.files_skipped} skipped · ${result.latency_s}s · citations ${result.verification.citations_checked}/${result.verification.citations_total} valid`;
  $('steps').innerHTML=result.steps.map(s=>`<div class="step"><b>${esc(s.step)}</b> — ${esc(s.detail)}</div>`).join('');
@@ -68,15 +73,20 @@ $('go').onclick=async()=>{$('go').disabled=true;$('stat').textContent='investiga
  $('ledger').innerHTML=result.model.configured?(result.model.ledger.length?result.model.ledger.map(l=>`<div class="step">${esc(l.model)} · ${esc(l.purpose)} · ${l.latency_s}s · in ${l.input_tokens} / out ${l.output_tokens} tok · est $${l.est_cost_usd}</div>`).join(''):'<span class="small">Configured; no call was needed.</span>'):'<span class="small">Deterministic-only mode (no MODEL_API_KEY). $0 model spend.</span>';
  $('hyps').innerHTML=result.hypotheses.map(h=>`<div class="card"><h3>${h.id} — ${esc(h.claim)} <span class="pill s-${h.status}">${h.status}</span></h3>
   <div class="small">Confidence: <b>${h.confidence}</b> — ${esc(h.confidence_meaning)}</div>
-  ${h.supporting.map(id=>{const e=result.evidence.find(x=>x.id===id);return e?`<pre class="ev" onclick="showSource('${e.file}',${e.start})">[${e.id} · ${e.kind}] ${esc(e.file)}:${e.start}-${e.end} — ${esc(e.label)}\n${esc(e.text)}</pre>`:''}).join('')}
+  ${h.supporting.map(id=>{const e=result.evidence.find(x=>x.id===id);return e?`<pre class="ev" data-file="${esc(e.file)}" data-start="${e.start}">[${e.id} · ${e.kind}] ${esc(e.file)}:${e.start}-${e.end} — ${esc(e.label)}\n${esc(e.text)}</pre>`:''}).join('')}
   <div class="small">Contradicting: ${h.contradicting.join(', ')||'none found'} · Missing: ${h.missing_evidence.join('; ')||'none'} · Next: ${h.next_steps.join('; ')}</div></div>`).join('');
+ document.querySelectorAll('.ev').forEach(el=>el.addEventListener('click',()=>showSource(el.dataset.file,Number(el.dataset.start))));
  drawGraph(result.graph);$('report').textContent=result.report+(result.model.synthesis?'\n\n--- Model synthesis (inference, citation-checked) ---\n'+result.model.synthesis.text:'');
  if(result.patch){$('patchcard').style.display='block';$('patch').textContent=result.patch.diff+'\n\n'+result.patch.note;}else $('patchcard').style.display='none';
  }finally{$('go').disabled=false;}};
 function drawGraph(g){const svg=$('graph');const pos={};const kinds={symptom:0,file:1,hypothesis:2,test:3};
+ graphNodes=g.nodes;
  const byKind={};g.nodes.forEach(n=>{(byKind[kinds[n.kind]??1]=byKind[kinds[n.kind]??1]||[]).push(n)});
  Object.values(byKind).forEach((arr,ci)=>arr.forEach((n,i)=>pos[n.id]=[70+ci*260,40+i*55]));
  const col={symptom:'#f87171',file:'#38bdf8',hypothesis:'#a78bfa',test:'#34d399'};
- svg.innerHTML=g.edges.map(e=>{const a=pos[e.from],b=pos[e.to];return a&&b?`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#33506e"/><text x="${(a[0]+b[0])/2}" y="${(a[1]+b[1])/2-3}" fill="#8aa0b8" font-size="9">${e.kind}</text>`:''}).join('')
- +g.nodes.map(n=>{const p=pos[n.id];return `<g class="node" onclick="showSource('${n.file||''}',${n.line||1})"><rect x="${p[0]-60}" y="${p[1]-14}" width="150" height="28" rx="7" fill="#111827" stroke="${col[n.kind]}"/><text x="${p[0]-52}" y="${p[1]+4}" fill="#dbe7f5" font-size="10">${esc(n.label.slice(0,26))}</text></g>`}).join('');}
+ // Nodes carry only a numeric index in markup; file/line are read from
+ // graphNodes in the click listener — never interpolated (review H1).
+ svg.innerHTML=g.edges.map(e=>{const a=pos[e.from],b=pos[e.to];return a&&b?`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#33506e"/><text x="${(a[0]+b[0])/2}" y="${(a[1]+b[1])/2-3}" fill="#8aa0b8" font-size="9">${esc(e.kind)}</text>`:''}).join('')
+ +g.nodes.map((n,i)=>{const p=pos[n.id];return `<g class="node" data-node-index="${i}"><rect x="${p[0]-60}" y="${p[1]-14}" width="150" height="28" rx="7" fill="#111827" stroke="${col[n.kind]||'#38bdf8'}"/><text x="${p[0]-52}" y="${p[1]+4}" fill="#dbe7f5" font-size="10">${esc(n.label.slice(0,26))}</text></g>`}).join('');
+ svg.querySelectorAll('.node').forEach(el=>el.addEventListener('click',()=>{const n=graphNodes[Number(el.dataset.nodeIndex)];if(n)showSource(n.file||'',n.line||1);}));}
 </script></body></html>
