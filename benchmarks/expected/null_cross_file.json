@@ -1,0 +1,1 @@
+{"case":"null_cross_file","query":"Traceback (most recent call last):\n  File \"service.py\", line 5, in greeting\n    return \"Hello \" + user[\"name\"]\nTypeError: 'NoneType' object is not subscriptable\nUnknown user ids crash instead of showing a guest greeting.","root_file":"store.py","root_symbol":"get_user","acceptable_status":["verified","inconclusive"]}

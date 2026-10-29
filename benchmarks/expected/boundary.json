@@ -1,0 +1,1 @@
+{"case":"boundary","query":"Free shipping is not applied when the order total is exactly 100. qualifies_for_free_shipping(100) returns False but the threshold is inclusive.","root_file":"shipping.py","root_symbol":"qualifies_for_free_shipping","acceptable_status":["verified","inconclusive"]}

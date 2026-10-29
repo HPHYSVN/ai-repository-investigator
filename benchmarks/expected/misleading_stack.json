@@ -1,0 +1,1 @@
+{"case":"misleading_stack","query":"Traceback (most recent call last):\n  File \"report.py\", line 6, in next_count\n    return count + 1\nTypeError: can only concatenate str (not \"int\") to str\nnext_count('41') fails.","root_file":"parser.py","root_symbol":"parse_count","acceptable_status":["verified","inconclusive"]}

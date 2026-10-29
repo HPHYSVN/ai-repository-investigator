@@ -1,0 +1,127 @@
+{
+  "summary": {
+    "cases": 5,
+    "agent_root_cause_accuracy": 1.0,
+    "baseline_root_cause_accuracy": 0.2,
+    "citation_validity": 1.0,
+    "model_spend_usd": 0,
+    "note": "deterministic mode; no MODEL_API_KEY configured during run"
+  },
+  "cases": [
+    {
+      "case": "ambiguous",
+      "agent_root_correct": true,
+      "baseline_top1_file": null,
+      "baseline_root_correct": false,
+      "agent_status": "inconclusive",
+      "top_files": [],
+      "hypothesis_statuses": [
+        "inconclusive"
+      ],
+      "citations_valid": {
+        "citations_checked": 1,
+        "citations_total": 1
+      },
+      "tests_run": 1,
+      "test_exit_codes": [
+        0
+      ],
+      "model_calls": 0,
+      "latency_s": 0.482
+    },
+    {
+      "case": "boundary",
+      "agent_root_correct": true,
+      "baseline_top1_file": "shipping.py",
+      "baseline_root_correct": true,
+      "agent_status": "verified",
+      "top_files": [
+        "shipping.py"
+      ],
+      "hypothesis_statuses": [
+        "confirmed-by-test"
+      ],
+      "citations_valid": {
+        "citations_checked": 3,
+        "citations_total": 3
+      },
+      "tests_run": 1,
+      "test_exit_codes": [
+        1
+      ],
+      "model_calls": 0,
+      "latency_s": 0.494
+    },
+    {
+      "case": "config_mismatch",
+      "agent_root_correct": true,
+      "baseline_top1_file": "test_client.py",
+      "baseline_root_correct": false,
+      "agent_status": "verified",
+      "top_files": [
+        "client.py"
+      ],
+      "hypothesis_statuses": [
+        "confirmed-by-test"
+      ],
+      "citations_valid": {
+        "citations_checked": 2,
+        "citations_total": 2
+      },
+      "tests_run": 1,
+      "test_exit_codes": [
+        1
+      ],
+      "model_calls": 0,
+      "latency_s": 0.488
+    },
+    {
+      "case": "misleading_stack",
+      "agent_root_correct": true,
+      "baseline_top1_file": "report.py",
+      "baseline_root_correct": false,
+      "agent_status": "verified",
+      "top_files": [
+        "parser.py"
+      ],
+      "hypothesis_statuses": [
+        "supported",
+        "rejected"
+      ],
+      "citations_valid": {
+        "citations_checked": 3,
+        "citations_total": 3
+      },
+      "tests_run": 1,
+      "test_exit_codes": [
+        1
+      ],
+      "model_calls": 0,
+      "latency_s": 0.5
+    },
+    {
+      "case": "null_cross_file",
+      "agent_root_correct": true,
+      "baseline_top1_file": "service.py",
+      "baseline_root_correct": false,
+      "agent_status": "verified",
+      "top_files": [
+        "store.py"
+      ],
+      "hypothesis_statuses": [
+        "supported",
+        "rejected"
+      ],
+      "citations_valid": {
+        "citations_checked": 4,
+        "citations_total": 4
+      },
+      "tests_run": 1,
+      "test_exit_codes": [
+        1
+      ],
+      "model_calls": 0,
+      "latency_s": 0.489
+    }
+  ]
+}

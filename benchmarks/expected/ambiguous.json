@@ -1,0 +1,1 @@
+{"case":"ambiguous","query":"The app sometimes behaves wrong and users are unhappy. Please find the bug.","root_file":null,"root_symbol":null,"expect_abstain":true,"acceptable_status":["inconclusive"]}

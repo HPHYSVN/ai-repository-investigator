@@ -1,0 +1,1 @@
+{"case":"config_mismatch","query":"The HTTP client timeout is None instead of the configured 30 seconds. request_timeout() returns None even though settings define a timeout.","root_file":"client.py","root_symbol":"request_timeout","acceptable_status":["verified","inconclusive"]}
