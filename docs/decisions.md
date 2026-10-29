@@ -27,3 +27,27 @@ Format: dated, ADR-style. `Confirmed` = verified fact or explicit user instructi
   per https://opencode.ai/v2/docs/skills (fetched 2026-10-29).
 - **Decision:** Investigation phase is read-only; patches are proposed diffs in
   a separate phase. Test execution is allow-listed and approval-gated.
+
+## 2026-10-29 — Phase B: Meta API verification + stack
+- **Confirmed (official docs, fetched 2026-10-29):** Meta Model API base URL
+  `https://api.meta.ai/v1`; auth `Authorization: Bearer $MODEL_API_KEY`
+  (dev.meta.ai/docs/quickstart, /docs/authentication); Responses API
+  `POST /v1/responses` with `{model, input}`; models `muse-spark-1.3`
+  (also 1.2/1.1) and `muse-wonder-1.0`; 1,048,576-token context.
+- **Confirmed (pricing, dev.meta.ai/docs/pricing-rate-limits):**
+  `muse-spark-1.3` $1.25 in / $4.25 out per 1M; `muse-wonder-1.0`
+  $4.00 / $20.00 per 1M. Rate limits 3,000 RPM / 4M TPM for both.
+- **Confirmed (environment):** No `MODEL_API_KEY`/`META_API_KEY` in the shell
+  env. App must therefore run fully in a deterministic no-model mode and use
+  Meta only when the user supplies their own `MODEL_API_KEY` server-side.
+  OpenCode's Meta credential is never read or reused.
+- **Decision:** Stack = Python 3.14 stdlib only (http.server, ast, urllib) +
+  vanilla HTML/CSS/JS frontend served by the same process. No pip installs,
+  no framework, no vector DB. Rationale: smallest reliable stack, zero new
+  attack/dependency surface, pytest already available for fixtures/tests.
+- **Decision:** Model adapter defaults: model `muse-spark-1.3` (env
+  `MODEL_API_MODEL`), base `https://api.meta.ai/v1` (env `MODEL_API_BASE_URL`),
+  key from `MODEL_API_KEY` then `META_API_KEY`. Per-investigation caps:
+  `INVESTIGATOR_MAX_MODEL_CALLS` (default 2), `INVESTIGATOR_BUDGET_USD`
+  (default 1.00). Contributor-mode models are NOT used (they allow training
+  on prompts/code).

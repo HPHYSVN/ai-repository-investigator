@@ -12,17 +12,53 @@
 - No application code written, per user instruction. No model/API spend incurred
   beyond this OpenCode session; no benchmark results exist yet (none fabricated).
 
+## 2026-10-29 — Phases B–F: full implementation (done)
+- **Phase B:** Meta Model API verified from official docs (base
+  `https://api.meta.ai/v1`, Bearer `MODEL_API_KEY`, Responses API,
+  `muse-spark-1.3`/`muse-wonder-1.0`, pricing + rate limits) — recorded in
+  `docs/decisions.md`. No `MODEL_API_KEY` in env, so the app runs in a
+  deterministic $0 mode and uses Meta only when a user supplies their own key.
+- **Phase C (vertical slice):** `app/repo_index.py` (gitignore/secret/binary-
+  aware indexing, AST symbols/imports/calls, BM25), `app/investigate.py`
+  (classify → retrieve → static detectors → graph path → hypotheses →
+  citation revalidation → report), `app/model_adapter.py` (provider-isolated,
+  call/budget caps, usage ledger, verified pricing), `app/server.py` +
+  `app/static/index.html` (repo selector, steps, Evidence Graph SVG, source
+  preview, hypothesis/evidence panel, test log, model ledger).
+- **Phase D:** Evidence Graph from extracted facts only; safe targeted test
+  execution (allow-listed `python -m pytest <test_*.py>`, 60s timeout, exit
+  code logged); proposed patches as unapplied unified diffs (boundary/config
+  detectors only). LLM synthesis is citation-checked; unverified citations
+  are stripped (verified against a local Responses-API stub — no real spend).
+- **Phase E (measured):** `python3 -m pytest tests/ -q` → **6 passed**.
+  `python3 benchmarks/run_benchmarks.py` → agent root-cause accuracy
+  **5/5 (1.0)** vs lexical BM25 top-1 baseline **1/5 (0.2)**; citation
+  validity **1.0**; ambiguous case correctly abstains (`inconclusive`);
+  ~0.5s/case; model spend **$0**. A real bug was found and fixed during
+  validation (detectors initially only scanned BM25-matched files and
+  missed upstream root causes — now scans graph neighbours / all files ≤200).
+- **Phase F:** `sample_repo/` demo (unknown SKU → `cart.py` returns None →
+  crash in `pricing.py`; expected notes live in the demo script, outside the
+  indexed repo), README, `.env.example`, finalised demo script below.
+
 ## Remaining risks / unknowns
-- App runtime Meta Model API unverified (endpoint, models, limits, auth).
+- Live Meta synthesis not yet exercised with a real `MODEL_API_KEY` (no key
+  in this environment); adapter verified only against official docs + a
+  local stub implementing the documented Responses API shape.
 - $150 credit balance/mechanics unverified (user-stated).
-- Stack not chosen; test-execution sandboxing design open.
+- Test execution is allow-list + timeout, not OS-sandboxed; only run tests
+  in repos you trust.
+- Detectors are Python-focused; other languages get lexical indexing only.
 
 ## Next steps
-1. Phase B: verify Meta Model API from official docs; record findings in
-   `docs/decisions.md`; choose smallest reliable stack.
-2. Await user's main product implementation brief before writing app code.
-3. Then Phase C vertical slice per `docs/architecture.md` acceptance criteria.
+1. With a real key: `MODEL_API_KEY=... python3 run.py`, run one live
+   investigation, confirm ledger/cost in UI, reserve credit for the demo.
+2. Optional: JS/TS symbol extraction; OS-level test sandboxing.
 
 ## Test results
-- None yet — no code to test. Skill files validated only by structure
-  (V2 docs format). This section must contain real command output going forward.
+- `python3 -m pytest tests/ -q` → 6 passed (2026-10-29).
+- `python3 benchmarks/run_benchmarks.py` → summary above; full measured
+  output in `benchmarks/results.json`.
+- Manual E2E: server health + `/api/investigate` on `sample_repo` returned
+  `verified`, root file `cart.py`, path pricing→checkout→cart, citations
+  valid, real pytest exit code 1 (planted bug).

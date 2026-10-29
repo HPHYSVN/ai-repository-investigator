@@ -1,8 +1,13 @@
-# Demo Script (2–3 min) — draft, to be finalised in Phase F
+# Demo Script (2–3 min) — finalised Phase F (2026-10-29)
 
-Prerequisite: a sample repo with a planted, nontrivial, multi-file bug, whose
-expected root cause/evidence is documented separately and NOT visible to the
-agent at runtime. Nothing below may be hardcoded or mocked.
+Demo repo: `sample_repo/` (agent indexes only this dir when selected).
+Expected answer, kept here outside the indexed repo: unknown SKU →
+`catalog.get_product` returns None → `cart.cart_total` (`cart.py:9`)
+silently returns None → crash in `pricing.format_price`. Expected agent
+result (measured 2026-10-29): status `verified`, H1 file `cart.py`,
+execution path pricing.py → checkout.py → cart.py, pytest exit 1,
+H1 `confirmed-by-test`. Start with `python3 run.py`, open
+http://127.0.0.1:8765 — the UI is pre-filled with this repo and bug report.
 
 ## Flow
 1. **Open repo (20s).** Select the sample repo; show honest indexing status

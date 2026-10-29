@@ -1,7 +1,8 @@
-# Architecture (Phase B draft — stack not yet chosen)
+# Architecture
 
-Status: planning only. No application code exists yet. Choices below marked
-*proposed* must be confirmed in `docs/decisions.md` before implementation.
+Status: implemented (Phase C–F, 2026-10-29). Stack: Python 3.14 stdlib only
++ vanilla HTML/CSS/JS, single process (`run.py` → `app/server.py`).
+Meta Model API verified from official docs — see `docs/decisions.md`.
 
 ## Proposed separation of concerns
 ```
