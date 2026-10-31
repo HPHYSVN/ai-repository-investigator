@@ -1,0 +1,1 @@
+{"case":"v08_config","description":"The client timeout is blank/None instead of the configured 30 seconds. request_timeout() returns None even though settings define a timeout.","console":"","network":"","root_files":["client.py"],"root_line":4,"expect_abstain":false}

@@ -1,0 +1,1 @@
+{"case":"v06_dependency","description":"Checkout page fails to load at all. ImportError: No module named pricing_utils in checkout total_label.","console":"ImportError: No module named pricing_utils","network":"","root_files":["checkout.py"],"root_line":1,"expect_abstain":false}

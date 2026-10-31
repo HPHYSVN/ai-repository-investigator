@@ -44,7 +44,21 @@ class MetaAdapter:
     def _budget_blocked(self):
         return self._unknown_cost_spent or self.spent() >= self.budget_usd
 
+    def complete_multimodal(self, prompt, image_data_url, purpose="visual-analysis"):
+        """Responses API image understanding (verified dev.meta.ai/docs/image-understanding):
+        input_image block with a base64 data: URL inside a user message.
+        muse-spark-1.3 modalities include image input. Returns text."""
+        if not image_data_url.startswith("data:image/"):
+            raise ModelError("image must be a data:image/... URL")
+        payload_input = [{"type": "message", "role": "user", "content": [
+            {"type": "input_text", "text": prompt},
+            {"type": "input_image", "image_url": image_data_url}]}]
+        return self._request(payload_input, purpose)
+
     def complete(self, prompt, purpose="synthesis"):
+        return self._request(prompt, purpose)
+
+    def _request(self, payload_input, purpose="synthesis"):
         """Return text or raise ModelError. Enforces call + budget caps."""
         if not self.configured:
             raise ModelError("MODEL_API_KEY not configured (deterministic mode)")
@@ -52,7 +66,7 @@ class MetaAdapter:
             raise ModelError(f"model call cap reached ({self.max_calls})")
         if self._budget_blocked():
             raise ModelError(f"budget cap reached (${self.budget_usd}) or prior call had unknown cost")
-        body = json.dumps({"model": self.model, "input": prompt}).encode()
+        body = json.dumps({"model": self.model, "input": payload_input}).encode()
         t0 = time.time()
         data = None
         for attempt in range(self.max_retries + 1):

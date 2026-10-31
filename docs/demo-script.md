@@ -1,41 +1,42 @@
-# Demo Script (2–3 min) — finalised Phase F (2026-10-29)
+# Demo Script (2–3 min) — Visual Bug-to-Code Investigator
 
-Demo repo: `sample_repo/` (agent indexes only this dir when selected).
-Expected answer, kept here outside the indexed repo: unknown SKU →
-`catalog.get_product` returns None → `cart.cart_total` (`cart.py:9`)
-silently returns None → crash in `pricing.format_price`. Expected agent
-result (measured 2026-10-29): status `verified`, H1 file `cart.py`,
-execution path pricing.py → checkout.py → cart.py, pytest exit 1,
-H1 `confirmed-by-test`. Start with `python3 run.py`, open
-http://127.0.0.1:8765 — the UI is pre-filled with this repo and bug report.
+Start: `python3 run.py` → http://127.0.0.1:8765 (pre-filled with the demo).
+Demo repo: `demo_webapp/` (agent indexes only this dir when selected).
+Expected answer, kept here outside the indexed repo: unknown gift SKU →
+`catalog.get_product` returns None → `cart.cart_total` (`cart.py:8`)
+silently returns None → `pricing.format_price` crashes → total blank,
+checkout 500. Measured 2026-10-31: outcome `verified`, root `cart.py`,
+pytest exit 1, proposed patch applied in a temp copy makes tests pass.
 
 ## Flow
-1. **Open repo (20s).** Select the sample repo; show honest indexing status
-   (files indexed/skipped, respecting `.gitignore`).
-2. **Submit bug (20s).** Paste a realistic report/stack trace where the failure
-   site is not the root cause.
-3. **Investigate (60s).** Live: candidate files/symbols, deterministic search
-   steps, execution path reconstructed across files. No fabricated progress —
-   each step shown is a real tool call.
-4. **Evidence Graph (30s).** Symptom → path → candidate root causes; click a
-   node to see exact source with file path and line numbers.
-5. **Hypotheses (30s).** Top hypothesis with supporting AND contradicting
-   evidence, confidence label + what the label means; competing hypothesis
-   shown as rejected with its evidence.
-6. **Verify (20s).** Run the targeted existing test; show the actual command,
-   exit code, and output; hypothesis status updates to `confirmed-by-test`
-   only if it truly passed.
-7. **Report + patch (20s).** Evidence-backed report; proposed patch and
-   regression test as a reviewable diff — not silently applied.
+1. **Show the bug (20s).** Open `demo_webapp/screenshot.png` (or the page):
+   cart total blank, "Checkout failed". State the promise: screenshot shows
+   *what* is wrong, not *which line* — evidence has to earn that link.
+2. **Upload + describe (20s).** Upload the screenshot in the UI; the bug
+   report, console (`TypeError …NoneType`) and network (`POST /api/checkout
+   -> 500`) fields are pre-filled. Note the evidence levels L1–L5.
+3. **Investigate (40s).** Live steps: indexing, log extraction, BM25,
+   detectors, dependency path pricing → cart_api → cart. Visual panel:
+   with a real `MODEL_API_KEY`, Muse Spark returns observable/inferred/
+   cannot-determine; without one it honestly reports metadata-only.
+4. **Hypotheses + graph (30s).** H1 `cart.py` None-return with source
+   evidence; H2 crash-site hypothesis rejected. Click graph nodes/evidence
+   to see exact `file:line` source. Contradicting evidence shown, not hidden.
+5. **Verify (30s).** Tick test execution, read the warning, confirm. Actual
+   command + exit code 1 appear; H1 becomes `confirmed-by-test`, outcome
+   `verified` — only because a real test ran.
+6. **Fix (20s).** Proposed diff (explicit `ValueError` instead of silent
+   `None`) — *not applied*; suggested regression test shown separately.
+   Mention: applied in a temp copy during development, tests passed there.
+7. **Close (10s).** "What Meta does: vision + synthesis. What deterministic
+   tools do: everything that must be provable. What we cannot claim:
+   live Meta is unverified until a key is set — the UI says so."
 
 ## Fallbacks
-- Recorded run of the identical, unedited workflow + screenshots, in case of
-  live API/network failure. Recording must be a real run, not a mock.
-- If the live investigation is inconclusive, present that honestly — correct
-  abstention with next steps is on-message for this product.
-
+- No network/key: the whole flow above runs deterministically; say so.
+- If live investigation is inconclusive, present the abstention honestly —
+  it is the product working as designed.
 ## Evidence checklist before recording
-- [ ] All report citations pass programmatic revalidation.
-- [ ] Test output in demo is from an actual run.
-- [ ] No API keys visible in UI, logs, terminal, or recording.
-- [ ] Demo repo's expected-answer notes kept outside agent-readable paths.
+- [ ] Citations pass revalidation (UI shows checked/total).
+- [ ] Test output is from an actual run in the recording.
+- [ ] No API keys visible anywhere.

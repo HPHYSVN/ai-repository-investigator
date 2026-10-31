@@ -63,3 +63,20 @@ Format: dated, ADR-style. `Confirmed` = verified fact or explicit user instructi
   detectors fire (H4). Heuristics that cannot be evidenced are not added.
 - **Decision:** Model calls with unknown pricing block further calls in the
   same adapter instance, so the budget cap cannot be bypassed (M5).
+
+## 2026-10-31 — Pivot to Visual Bug-to-Code Investigator
+- **Decision:** Keep the deterministic ARI engine (index, detectors, graph,
+  citation verification, confirmed test execution) and add a visual layer:
+  screenshot validation (`app/visual.py`), console/network parsing
+  (`app/logs.py`), JS/TS lexical symbols, outcome taxonomy
+  (`verified|likely|inconclusive|not_reproducible`), and a 10-case visual
+  benchmark separate from the original 5-case benchmark.
+- **Confirmed (official docs, fetched 2026-10-31):** `muse-spark-1.3`
+  image understanding via Responses API `input_image` base64 data URLs
+  (dev.meta.ai/docs/image-understanding). Adapter gained
+  `complete_multimodal`; visual + synthesis share the existing caps/ledger.
+- **Confirmed (environment):** Still no `MODEL_API_KEY`; live Meta
+  inference (text and image) remains UNVERIFIED. An unrelated provider key
+  in the environment was deliberately NOT substituted for the Meta key.
+- **Decision:** No browser extension, no DOM-to-source claims, no
+  auto-applied patches. Screenshot = Level-1 evidence only.

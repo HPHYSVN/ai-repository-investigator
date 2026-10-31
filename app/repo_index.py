@@ -81,6 +81,8 @@ class RepoIndex:
                 self.files[rel] = fi
                 if rel.endswith(".py"):
                     self._parse_python(fi)
+                elif rel.endswith((".js", ".jsx", ".ts", ".tsx", ".mjs")):
+                    self._parse_js(fi)
         # BM25 stats
         self.N = max(len(self.files), 1)
         self.df = Counter()
@@ -130,6 +132,24 @@ class RepoIndex:
                     visit(child, prefix)
         visit(tree)
 
+    def _parse_js(self, fi):
+        """Lightweight lexical JS/TS extraction (NOT a full AST): function and
+        class declarations, arrow-function consts, and import sources. Used for
+        retrieval and file-level graph edges; no JS detectors are claimed."""
+        text = "\n".join(fi.lines)
+        for m in re.finditer(r"(?:import\s+[^'\"]*from\s*|require\()\s*['\"]([^'\"]+)['\"]", text):
+            fi.imports.append(m.group(1))
+        pats = [r"\bfunction\s+([A-Za-z_$][\w$]*)\s*\(",
+                r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[\w$]+)\s*=>",
+                r"\bclass\s+([A-Za-z_$][\w$]*)"]
+        for pat in pats:
+            for m in re.finditer(pat, text):
+                line = text[:m.start()].count("\n") + 1
+                sym = Symbol(m.group(1), "function", fi.rel, line, line)
+                sym.calls = re.findall(r"\b([A-Za-z_$][\w$]*)\s*\(", text[m.start():m.start() + 400])
+                fi.symbols.append(sym)
+                self.symbols.setdefault(m.group(1), []).append(sym)
+
     # ---- retrieval ----
     def bm25_search(self, terms, limit=8):
         terms = [t for t in dict.fromkeys(terms) if t]
@@ -178,7 +198,8 @@ class RepoIndex:
         edges = []
         for rel, fi in self.files.items():
             for mod in fi.imports:
-                target = self.file_by_stem(mod.split(".")[-1])
+                stem = os.path.splitext(mod.replace("\\", "/").split("/")[-1])[0]
+                target = self.file_by_stem(stem)
                 if target and target != rel:
                     edges.append((rel, target, "imports"))
         return edges

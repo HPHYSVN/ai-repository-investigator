@@ -71,7 +71,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": True, "model_configured": a.configured, "model": a.model,
                 "mode": "meta+deterministic" if a.configured else "deterministic-only (set MODEL_API_KEY to enable Meta synthesis)",
                 "test_execution_disabled": os.environ.get("INVESTIGATOR_DISABLE_TEST_EXECUTION") == "1",
-                "default_repo": os.path.join(ROOT, "sample_repo")}))
+                "default_repo": os.path.join(ROOT, "demo_webapp")}))
         return self._send(404, json.dumps({"error": "not found"}))
 
     def do_POST(self):
@@ -79,7 +79,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404, json.dumps({"error": "not found"}))
         try:
             n = int(self.headers.get("Content-Length", 0))
-            if n > 200_000:
+            if n > 10_000_000:  # accommodates a <=5MB screenshot as base64
                 return self._send(413, json.dumps({"error": "request body too large"}))
             req = json.loads(self.rfile.read(n) or b"{}")
         except Exception:
@@ -87,7 +87,21 @@ class Handler(BaseHTTPRequestHandler):
         repo, query, run_tests, error = validate_investigate_request(req)
         if error:
             return self._send(400, json.dumps({"error": error}))
-        result = run_investigation(repo, query, run_tests=run_tests)
+        screenshot = None
+        if req.get("screenshot_b64"):
+            from .visual import decode_image, ImageError
+            try:
+                screenshot = decode_image(req["screenshot_b64"])
+            except ImageError as e:
+                return self._send(400, json.dumps({"error": f"screenshot rejected: {e}"}))
+        for fld in ("console_log", "network_log"):
+            if req.get(fld) is not None and not isinstance(req.get(fld), str):
+                return self._send(400, json.dumps({"error": f"{fld} must be a string"}))
+            if req.get(fld) and len(req[fld]) > 20_000:
+                return self._send(400, json.dumps({"error": f"{fld} exceeds 20000 characters"}))
+        result = run_investigation(repo, query, run_tests=run_tests, screenshot=screenshot,
+                                   console_text=req.get("console_log", ""),
+                                   network_text=req.get("network_log", ""))
         return self._send(200, json.dumps(result))
 
 def main(port=8765):

@@ -114,6 +114,28 @@ def config_mismatch_hits(index):
                                  "extra": {"used": used, "defined": similar[0], "defined_at": defined[similar[0]]}})
     return hits
 
+def unresolved_import_hits(index):
+    """Deterministic dependency check: a Python import whose top-level module
+    is neither in the repo, nor stdlib, nor an obviously external package with
+    a near-identical local module (likely a wrong/renamed local import)."""
+    import sys as _sys
+    stdlib = getattr(_sys, "stdlib_module_names", set())
+    stems = {os.path.splitext(os.path.basename(r))[0] for r in index.files}
+    hits = []
+    for rel, fi in index.files.items():
+        if not rel.endswith(".py"):
+            continue
+        for mod in fi.imports:
+            top = mod.split(".")[0]
+            if top in stems or top in stdlib:
+                continue
+            similar = [s for s in stems if s.split("_")[0] == top.split("_")[0] or top in s or s in top]
+            if similar:
+                hits.append({"type": "dependency_mismatch", "file": rel, "line": 1,
+                             "symbol": "", "extra": {"used": top, "defined": similar[0]},
+                             "detail": f"imports '{top}' which does not exist in this repo; similar local module: '{similar[0]}'"})
+    return hits
+
 CONVERSION_CALLS = {"int", "float", "Decimal", "bool"}
 
 def missing_conversion_hits(index):
@@ -235,10 +257,15 @@ def propose_patch(index, hyp):
     d = hyp.get("detector") or {}
     rel, line = hyp["files"][0], (d.get("line") or hyp["lines"][0])
     fi = index.files.get(rel)
-    if not fi or d.get("type") not in ("boundary", "config_mismatch"):
+    if not fi or d.get("type") not in ("boundary", "config_mismatch", "dependency_mismatch", "none_return"):
         return None
     old = fi.lines[line - 1]
-    if d["type"] == "boundary":
+    if d.get("type") == "none_return":
+        indent = old[:len(old) - len(old.lstrip())]
+        new = indent + 'raise ValueError("required value is missing")  # proposed: fail explicitly instead of returning None'
+    elif d.get("type") == "dependency_mismatch":
+        new = old.replace(d["extra"]["used"], d["extra"]["defined"], 1)
+    elif d["type"] == "boundary":
         new = old.replace("> ", ">= ", 1) if d["extra"]["op"] == ">" else old.replace("< ", "<= ", 1)
     else:
         new = old.replace(repr(d["extra"]["used"]), repr(d["extra"]["defined"])).replace(
@@ -251,7 +278,32 @@ def propose_patch(index, hyp):
 
 # ---------------- main ----------------
 
-def run_investigation(repo_path, query, run_tests=False, adapter=None):
+OUTCOMES = {
+    "verified": "Verified: an actually-executed test reproduced/confirmed the suspected cause.",
+    "likely": "Likely: static/graph evidence supports the hypothesis, but no confirming test has run.",
+    "inconclusive": "Inconclusive: evidence is insufficient; the agent abstains rather than guessing.",
+    "not_reproducible": "Not reproducible: the selected existing tests pass and no cause was confirmed; the bug may need a new reproduction case.",
+}
+
+def _suggest_regression_test(top, index):
+    """Suggested (never applied, never claimed as run) regression-test skeleton
+    built from the actual suspected symbol. Inputs must be filled in by a human."""
+    if not top or not top.get("files"):
+        return None
+    stem = os.path.splitext(os.path.basename(top["files"][0]))[0]
+    sym = (top.get("symbols") or [""])[0] or "the_suspected_function"
+    det = (top.get("detector") or {}).get("type", "unknown")
+    return {"file_suggestion": f"test_{stem}.py", "kind": "suggestion-not-run",
+            "code": (f"# Suggested regression test — add to test_{stem}.py and fill in\n"
+                     f"# the exact input from the bug report. NOT run by the agent.\n"
+                     f"from {stem} import {sym}\n\n"
+                     f"def test_{sym}_regression():\n"
+                     f"    # TODO: use the failing input described in the report ({det})\n"
+                     f"    result = {sym}(...)  # replace ... with the real arguments\n"
+                     f"    assert result is not None  # replace with the expected correct behaviour\n")}
+
+def run_investigation(repo_path, query, run_tests=False, adapter=None,
+                      screenshot=None, console_text="", network_text=""):
     t0 = time.time()
     steps, evidence, hypotheses = [], [], []
     def step(name, detail):
@@ -259,10 +311,34 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
     if not os.path.isdir(repo_path):
         return {"status": "failed", "error": f"repository path not found: {repo_path}",
                 "steps": steps, "hypotheses": [], "evidence": [], "graph": {"nodes": [], "edges": []}}
+    if adapter is None:
+        adapter = MetaAdapter()
+    # ---- Level 1-3 inputs: screenshot, console, network (all untrusted) ----
+    from .visual import analyse_screenshot, ImageError
+    from .logs import parse_logs
+    visual = None
+    if screenshot:
+        try:
+            visual = analyse_screenshot(screenshot, query, adapter)
+            step("visual-analysis", f"{visual['source']}; format={visual['info']['mime']} "
+                                    f"{visual['info']['width']}x{visual['info']['height']}; "
+                                    f"{len(visual['observable'])} observable(s), {len(visual['inferred'])} inference(s)")
+        except ImageError as e:
+            step("visual-analysis", f"screenshot rejected: {e}")
+            visual = {"error": str(e), "observable": [], "inferred": [], "cannot_determine": [], "info": None, "source": "rejected"}
+    logs = parse_logs(console_text, network_text)
+    if console_text or network_text:
+        step("log-analysis", f"{len(logs['console_errors'])} console error(s), "
+                             f"{len(logs['failed_requests'])} failed request(s) extracted")
+    # Combined text drives retrieval, but stack frames keep their provenance
+    combined = "\n".join([query or "",
+                          " ".join((visual or {}).get("observable", [])),
+                          " ".join((visual or {}).get("inferred", [])),
+                          logs["cleaned"]["console"], logs["cleaned"]["network"]])
     index = RepoIndex(repo_path)
     step("recon", f"indexed {len(index.files)} files, skipped {index.skipped} (ignored/secret/binary/large)")
 
-    frames = FRAME_RE.findall(query or "")
+    frames = FRAME_RE.findall(combined or "")
     frame_files = []
     for path, ln, func in frames:
         rel = index.file_by_stem(os.path.splitext(os.path.basename(path))[0])
@@ -272,7 +348,7 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
     step("classify", f"{'stack trace' if frames else 'bug report'}; "
                      f"{len(frames)} frame(s)" + (f"; symptom at {symptom['file']}:{symptom['line']} in {symptom['func']}()" if symptom else ""))
 
-    terms = _terms(query)
+    terms = _terms(combined) + logs["terms"]
     ranked = index.bm25_search(terms, limit=8)
     step("retrieval", "BM25 top files: " + (", ".join(f"{r} ({s:.1f})" for s, r in ranked[:5]) or "none"))
 
@@ -301,6 +377,7 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
             det_hits.append(h)
     det_hits += config_mismatch_hits(index)
     det_hits += missing_conversion_hits(index)
+    det_hits += unresolved_import_hits(index)
     step("static-analysis", f"{len(det_hits)} detector hit(s): " +
          (", ".join(f"{h['type']}@{h['file']}:{h['line']}" for h in det_hits[:6]) or "none"))
 
@@ -355,6 +432,7 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
             "boundary": f"a strict boundary comparison in {top['file']} excludes a boundary value that should be included",
             "config_mismatch": f"code in {top['file']} reads an undefined config key, so configuration is silently wrong/missing",
             "missing_conversion": f"{top.get('symbol') or 'a function'}() in {top['file']} returns its input unconverted while a caller uses the result in arithmetic, so the failure surfaces at the use site, not the origin",
+            "dependency_mismatch": f"{top['file']} imports a module that does not exist in this repo while a similarly named local module does, so the import/dependency path is broken",
         }
         hypotheses.append({
             "id": "H1", "claim": claim_by_type.get(top["type"], top["detail"]),
@@ -426,6 +504,12 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
                         status = "verified"
                     elif p.returncode != 0:
                         hypotheses[0]["status"] = "supported"
+                elif hypotheses and p.returncode != 0 and hypotheses[0]["files"]:
+                    stem = os.path.splitext(os.path.basename(hypotheses[0]["files"][0]))[0]
+                    if stem in out or hypotheses[0]["files"][0] in out:
+                        hypotheses[0]["status"] = "supported"
+                        hypotheses[0]["missing_evidence"] = [
+                            m for m in hypotheses[0]["missing_evidence"] if "confirming test" not in m]
                     else:
                         hypotheses[0]["contradicting"].append(evidence[-1]["id"])
                         hypotheses[0]["missing_evidence"].append("selected tests pass; bug may need a new reproduction test")
@@ -461,6 +545,16 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
         node("test:pytest", "test", f"pytest exit={test_log[0]['exit_code']}")
         if hypotheses:
             edges.append({"from": "test:pytest", "to": "hyp:H1", "kind": "confirms" if hypotheses[0]["status"] == "confirmed-by-test" else "tests"})
+    if visual and not visual.get("error"):
+        node("visual:screenshot", "symptom", "screenshot: " + ((visual["observable"][0][:40] if visual["observable"] else "metadata only")),
+             None, None)
+        if "symptom" in nodes:
+            edges.append({"from": "visual:screenshot", "to": "symptom", "kind": "informs (uncertain)"})
+    if logs["console_errors"] or logs["failed_requests"]:
+        node("logs:provided", "symptom",
+             f"logs: {len(logs['console_errors'])} error(s), {len(logs['failed_requests'])} failed req", None, None)
+        if hypotheses:
+            edges.append({"from": "logs:provided", "to": "hyp:H1", "kind": "informs (uncertain)"})
 
     # ---- citation revalidation (mandatory before report) ----
     valid = sum(1 for e in evidence if index.validate_citation(e["file"], e["start"], e["end"], e["sha256"]))
@@ -468,9 +562,35 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
     evidence = [e for e in evidence if index.validate_citation(e["file"], e["start"], e["end"], e["sha256"])]
 
     patch = propose_patch(index, hypotheses[0]) if hypotheses and hypotheses[0].get("detector") else None
+    regression_test = _suggest_regression_test(hypotheses[0] if hypotheses else None, index)
+
+    # ---- outcome taxonomy (visual-investigator statuses) ----
+    if hypotheses and hypotheses[0]["status"] == "confirmed-by-test":
+        outcome = "verified"
+    elif hypotheses and hypotheses[0]["status"] == "inconclusive":
+        outcome = "inconclusive"  # explicit abstention outranks test-pass signals
+    elif test_log and all(t["exit_code"] == 0 for t in test_log) and hypotheses and hypotheses[0]["status"] == "unverified":
+        outcome = "not_reproducible"
+        status = "inconclusive"
+    elif status == "verified" or (hypotheses and hypotheses[0]["status"] == "supported"):
+        outcome = "likely"
+    else:
+        outcome = "inconclusive"
 
     # ---- report ----
-    lines = [f"# Investigation report — status: {status}", ""]
+    lines = [f"# Investigation report — outcome: {outcome} ({OUTCOMES[outcome]})", "",
+             "## Reported problem", (query or "")[:2000], ""]
+    if visual:
+        lines += ["## Visual observations (Level 1-2 evidence)",
+                  f"- Source: {visual['source']}",
+                  *[f"- Observable: {o}" for o in visual["observable"]],
+                  *[f"- Inferred (not observed): {o}" for o in visual["inferred"]],
+                  *[f"- Cannot determine from screenshot: {o}" for o in visual["cannot_determine"]], ""]
+    if console_text or network_text:
+        lines += ["## Relevant logs (Level 3 evidence, secrets redacted)",
+                  *[f"- Console: {e['kind']}: {e['detail']}" for e in logs["console_errors"]],
+                  *[f"- Failed request: {f['method']} {f['url']} -> {f['status']}" for f in logs["failed_requests"]], ""]
+    lines += [f"## Conclusion status: {status}", ""]
     if status == "inconclusive" and hypotheses:
         lines += ["## What is unknown", hypotheses[0]["claim"] + ".",
                   "Missing: " + "; ".join(hypotheses[0]["missing_evidence"]),
@@ -488,6 +608,13 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
         lines += ["## Tests", "No tests were run in this investigation.", ""]
     if patch:
         lines += ["## Proposed patch (not applied)", "```diff", patch["diff"], "```", ""]
+    if regression_test:
+        lines += ["## Suggested regression test (not applied, not run)",
+                  f"Add to `{regression_test['file_suggestion']}`:", "```python", regression_test["code"], "```", ""]
+    lines += ["## Confidence and limitations",
+              f"Outcome '{outcome}': {OUTCOMES[outcome]}",
+              "Dependency paths are graph reachability, not runtime traces. Screenshot observations "
+              "do not by themselves identify a source line. Detector findings are heuristics.", ""]
     report = "\n".join(lines)
 
     # ---- optional Meta synthesis (inference, citation-checked) ----
@@ -522,7 +649,14 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None):
             step("model-synthesis", f"model unavailable, deterministic report used ({e})")
     model_info["ledger"] = adapter.ledger
 
-    return {"status": status, "repo": index.root, "files_indexed": len(index.files),
+    return {"status": status, "outcome": outcome, "outcome_meaning": OUTCOMES[outcome],
+            "visual": visual, "logs": {k: logs[k] for k in ("console_errors", "network_requests", "failed_requests")},
+            "regression_test": regression_test,
+            "evidence_levels": {"L1_screenshot": bool(visual and visual.get("observable")),
+                                "L2_description": bool(query), "L3_logs": bool(console_text or network_text),
+                                "L4_source_link": bool(hypotheses and hypotheses[0]["files"]),
+                                "L5_test_verified": bool(hypotheses and hypotheses[0]["status"] == "confirmed-by-test")},
+            "repo": index.root, "files_indexed": len(index.files),
             "files_skipped": index.skipped, "steps": steps, "evidence": evidence,
             "hypotheses": hypotheses, "execution_path": exec_path,
             "graph": {"nodes": list(nodes.values()), "edges": edges},

@@ -1,0 +1,1 @@
+{"case":"v05_transform","description":"Screenshot: price shows $499.90 instead of $49.99. price_label cents_to_dollars conversion is wrong by 10x.","console":"","network":"","root_files":["money.py"],"root_line":2,"expect_abstain":false}

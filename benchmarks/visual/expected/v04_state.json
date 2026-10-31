@@ -1,0 +1,1 @@
+{"case":"v04_state","description":"Screenshot: clicking Add does not change the cart badge; the item list never updates. on_add_clicked state items stay empty.","console":"","network":"","root_files":["ui.py","state.py"],"root_line":4,"expect_abstain":false}

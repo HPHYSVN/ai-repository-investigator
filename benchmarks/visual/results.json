@@ -1,0 +1,173 @@
+{
+  "summary": {
+    "cases": 10,
+    "root_cause_accuracy": 0.889,
+    "file_localization_accuracy": 0.889,
+    "line_localization_accuracy": 0.889,
+    "abstention_correct": "1/1",
+    "verification_verified_share": "5/9 (verified only when an executed test confirms)",
+    "citation_validity": 1.0,
+    "model_spend_usd": 0,
+    "note": "controlled synthetic fixtures only; no real-world repos measured; deterministic mode (no MODEL_API_KEY)"
+  },
+  "cases": [
+    {
+      "case": "v01_null_cart",
+      "root_hit": true,
+      "line_hit": true,
+      "baseline_top1": "cart.py",
+      "baseline_hit": true,
+      "outcome": "verified",
+      "top_files": [
+        "cart.py"
+      ],
+      "hypotheses": 1,
+      "latency_s": 0.459,
+      "test_exits": [
+        1
+      ]
+    },
+    {
+      "case": "v02_js_render",
+      "root_hit": true,
+      "line_hit": true,
+      "baseline_top1": "render.js",
+      "baseline_hit": true,
+      "outcome": "not_reproducible",
+      "top_files": [
+        "render.js"
+      ],
+      "hypotheses": 1,
+      "latency_s": 0.456,
+      "test_exits": [
+        0
+      ]
+    },
+    {
+      "case": "v03_api_field",
+      "root_hit": true,
+      "line_hit": true,
+      "baseline_top1": "client.py",
+      "baseline_hit": true,
+      "outcome": "verified",
+      "top_files": [
+        "client.py"
+      ],
+      "hypotheses": 1,
+      "latency_s": 0.459,
+      "test_exits": [
+        1
+      ]
+    },
+    {
+      "case": "v04_state",
+      "root_hit": true,
+      "line_hit": true,
+      "baseline_top1": "ui.py",
+      "baseline_hit": true,
+      "outcome": "likely",
+      "top_files": [
+        "ui.py"
+      ],
+      "hypotheses": 1,
+      "latency_s": 0.466,
+      "test_exits": [
+        1
+      ]
+    },
+    {
+      "case": "v05_transform",
+      "root_hit": false,
+      "line_hit": false,
+      "baseline_top1": "label.py",
+      "baseline_hit": false,
+      "outcome": "likely",
+      "top_files": [
+        "label.py"
+      ],
+      "hypotheses": 1,
+      "latency_s": 0.449,
+      "test_exits": [
+        1
+      ]
+    },
+    {
+      "case": "v06_dependency",
+      "root_hit": true,
+      "line_hit": true,
+      "baseline_top1": "test_checkout.py",
+      "baseline_hit": false,
+      "outcome": "verified",
+      "top_files": [
+        "checkout.py"
+      ],
+      "hypotheses": 1,
+      "latency_s": 0.515,
+      "test_exits": [
+        2
+      ]
+    },
+    {
+      "case": "v07_boundary",
+      "root_hit": true,
+      "line_hit": true,
+      "baseline_top1": "test_shipping.py",
+      "baseline_hit": false,
+      "outcome": "verified",
+      "top_files": [
+        "shipping.py"
+      ],
+      "hypotheses": 1,
+      "latency_s": 0.456,
+      "test_exits": [
+        1
+      ]
+    },
+    {
+      "case": "v08_config",
+      "root_hit": true,
+      "line_hit": true,
+      "baseline_top1": "test_client.py",
+      "baseline_hit": false,
+      "outcome": "verified",
+      "top_files": [
+        "client.py"
+      ],
+      "hypotheses": 1,
+      "latency_s": 0.482,
+      "test_exits": [
+        1
+      ]
+    },
+    {
+      "case": "v09_misleading",
+      "root_hit": true,
+      "line_hit": true,
+      "baseline_top1": "report.py",
+      "baseline_hit": false,
+      "outcome": "likely",
+      "top_files": [
+        "parser.py"
+      ],
+      "hypotheses": 2,
+      "latency_s": 0.457,
+      "test_exits": [
+        1
+      ]
+    },
+    {
+      "case": "v10_ambiguous",
+      "root_hit": true,
+      "line_hit": null,
+      "baseline_top1": null,
+      "baseline_hit": false,
+      "outcome": "inconclusive",
+      "top_files": [],
+      "hypotheses": 1,
+      "latency_s": 0.458,
+      "test_exits": [
+        0
+      ]
+    }
+  ]
+}

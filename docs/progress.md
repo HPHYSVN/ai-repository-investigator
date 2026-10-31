@@ -93,3 +93,20 @@
   original benchmark agent **5/5** vs baseline **1/5**, citation validity
   **1.0** (existence/range/hash meaning); adversarial **3/3**; $0 spend.
 - **Live Meta inference remains UNVERIFIED** (no real key available).
+
+## 2026-10-31 — Pivot: Visual Bug-to-Code Investigator
+- Added `app/visual.py` (image validation, metadata-only degraded mode,
+  strict structured-JSON parsing of Meta vision output), `app/logs.py`
+  (console/network extraction + secret redaction), multimodal adapter
+  method, JS/TS lexical extraction, `dependency_mismatch` detector,
+  outcome taxonomy, regression-test suggestions, None-return patch
+  proposals, visual/log Evidence Graph nodes.
+- New demo: `demo_webapp/` (JS frontend + Python API) with a real headless-
+  Chromium screenshot of the broken cart page; UI rebranded and pre-filled.
+- **Measured:** `python3 -m pytest tests/ -q` → 32 passed; visual benchmark
+  (10 synthetic cases) root-cause 0.889 (8/9; cents-transform case missed,
+  reported as-is), abstention 1/1, citations 1.0, 5/9 verified; original
+  benchmark still 5/5 vs 1/5; adversarial 3/3. Proposed demo patch verified
+  in a temp copy (tests pass there; original never modified).
+- **Live Meta inference remains UNVERIFIED** (no key in environment);
+  multimodal path is stub-tested only. Exact live-check steps in README.

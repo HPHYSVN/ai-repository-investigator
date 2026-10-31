@@ -1,0 +1,1 @@
+{"case":"v01_null_cart","description":"Screenshot: cart total is blank and checkout fails. When I add an item to the cart, the total price becomes blank.","console":"TypeError: unsupported format string passed to NoneType","network":"POST /api/checkout -> 500","root_files":["cart.py"],"root_line":5,"expect_abstain":false}

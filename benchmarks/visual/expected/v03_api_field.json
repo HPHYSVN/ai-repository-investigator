@@ -1,0 +1,1 @@
+{"case":"v03_api_field","description":"Product price is blank on the page. displayed_price fails with KeyError for price from product_response api.","console":"KeyError: 'price'","network":"GET /api/product -> 200","root_files":["client.py","api.py"],"root_line":5,"expect_abstain":false}

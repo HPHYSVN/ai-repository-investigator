@@ -1,50 +1,41 @@
-# Architecture
+# Architecture — Visual Bug-to-Code Investigator
 
-Status: implemented (Phase C–F, 2026-10-29). Stack: Python 3.14 stdlib only
-+ vanilla HTML/CSS/JS, single process (`run.py` → `app/server.py`).
-Meta Model API verified from official docs — see `docs/decisions.md`.
+Stack: Python 3.14 stdlib only + vanilla HTML/CSS/JS, single process
+(`run.py` → `app/server.py`, binds 127.0.0.1). No new dependencies.
 
-## Proposed separation of concerns
 ```
-UI (local web app)
-  └─ Investigation orchestrator (structured state machine, not chat)
-       ├─ Repository tools (deterministic): git, file/symbol search,
-       │   parsing, import/call graph, targeted reads, test runner
-       ├─ Retrieval/indexing: lexical/BM25 first; embeddings only if
-       │   a measured recall gap justifies them
-       └─ Model adapter (provider-isolated): Meta Model API primary,
-           optional fallback; classification / planning / hypothesis
-           evaluation / final synthesis as separate, logged call sites
-Evidence store: citations (file, lines, snippet hash), hypotheses, graph
-nodes/edges, test logs, model-usage ledger (model, count, latency, tokens, cost)
+Browser UI (app/static/index.html)
+  screenshot upload+preview · bug report · console/network logs
+  outcome banner · Evidence Graph · hypotheses · diff · report
+        | JSON (screenshot as base64 data URL, <=5 MB)
+app/server.py  ── path validation, test-execution confirmation gate
+        |
+app/investigate.py  (orchestrator, structured state not chat)
+  ├─ app/visual.py      screenshot magic/MIME/size validation;
+  │                     Meta vision -> structured JSON observations
+  │                     (degraded metadata-only mode without a key)
+  ├─ app/logs.py        console/network extraction, secret redaction
+  ├─ app/repo_index.py  gitignore-aware index; Python AST symbols/
+  │                     imports/calls; JS/TS lexical symbols; BM25
+  ├─ detectors          None-return, dict_get, boundary, config key,
+  │                     unconverted producer, unresolved import
+  ├─ graph              BFS dependency path (reachability, not runtime)
+  ├─ hypotheses         ranked, +/- evidence, labelled confidence,
+  │                     H4 abstention gate for non-specific queries
+  ├─ tests (opt-in)     allow-listed pytest, confirm-gated, 60s,
+  │                     secret-stripped env, real exit codes logged
+  ├─ verification       every citation rechecked (exists/range/SHA-256)
+  └─ app/model_adapter.py  Meta Responses API (text + input_image),
+                           caps, 429 backoff, token/cost ledger
 ```
 
-## Core data types (proposed)
-- `Investigation`: query, repo ref, status (`investigating|verified|inconclusive|failed`), steps log.
-- `Evidence`: id, kind (`source|static|test|inference`), file, line range, snippet hash, text.
-- `Hypothesis`: claim, supporting[], contradicting[], files/symbols/lines,
-  confidence label + explanation, missing evidence, next steps, status.
-- `EvidenceGraph`: nodes (symptom, file, symbol, hypothesis, test) and edges
-  (calls, imports, data-flow, supports, contradicts, confirms, rejects) — built
-  only from extracted facts and logged results.
-- `Citation check`: re-read file range and compare snippet hash before display.
+Evidence levels: L1 screenshot observation → L2 description → L3 logs →
+L4 source link → L5 test-verified. Outcomes:
+`verified|likely|inconclusive|not_reproducible` (meanings in
+`app/investigate.py:OUTCOMES`).
 
-## User journey (acceptance criteria for Phase C vertical slice)
-1. Select a local Git repo → indexing status shown honestly (files indexed, skipped).
-2. Submit a bug report or stack trace → investigation state advances visibly.
-3. Relevant files/symbols and execution path shown with clickable `file:line` evidence.
-4. Hypotheses ranked with supporting/contradicting evidence; inconclusive is a valid result.
-5. Final report whose citations all pass programmatic revalidation.
-6. Test log shows only commands that actually ran, with exit codes.
-
-## Technical risks
-- Meta Model API surface (models, tool calling, limits) unverified — verify
-  from official docs first; adapter must tolerate rate limits/timeouts/bad JSON.
-- Running untrusted repo tests safely — allow-list + timeout + approval gating.
-- Large repos — index incrementally, never load all files into context.
-- Prompt injection via repo content — treat as data, never instructions.
-- Budget: $150 stated credit; strong model reserved for synthesis, cheap calls
-  elsewhere, hard caps, reserve for final demo.
-
-## Deferred (nonessential until core works)
-Vector DB, multi-repo support, embeddings, auto-applied patches, auth/multi-user.
+Trust boundaries: repo files, logs, and screenshots are untrusted data
+(escaped in UI, redacted before model calls, never executed except
+confirm-gated pytest in the target repo). Investigation is read-only;
+patches are proposed diffs only. Live Meta inference is unverified in
+the dev environment (no `MODEL_API_KEY`); see README.

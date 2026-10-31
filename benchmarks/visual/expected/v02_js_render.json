@@ -1,0 +1,1 @@
+{"case":"v02_js_render","description":"Screenshot: the total element stays empty after adding an item. renderTotal should show the cart total text.","console":"TypeError: Cannot read properties of undefined","network":"","root_files":["render.js"],"root_line":2,"expect_abstain":false}

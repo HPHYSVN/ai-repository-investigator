@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Repository Investigator</title>
+<title>Visual Bug-to-Code Investigator</title>
 <style>
 :root{--bg:#0b0f17;--panel:#111827;--panel2:#0f172a;--line:#1f2b3d;--txt:#dbe7f5;--dim:#8aa0b8;--acc:#38bdf8;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--vio:#a78bfa}
 *{box-sizing:border-box}body{margin:0;font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--bg);color:var(--txt)}
@@ -28,17 +28,25 @@ svg{width:100%;height:300px;background:#0b1220;border:1px solid var(--line);bord
 .diff-add{color:var(--ok)}.err{color:var(--bad)}
 @media(max-width:900px){main{grid-template-columns:1fr}}
 </style></head><body>
-<header><h1>AI Repository <span>Investigator</span></h1><span class="badge" id="mode">…</span><span class="badge" id="stat"></span></header>
+<header><h1>Visual Bug-to-Code <span>Investigator</span></h1><span class="badge" id="mode">…</span><span class="badge" id="stat"></span></header>
 <main>
 <aside>
 <label>Local repository path</label><input id="repo" placeholder="/path/to/repo">
 <label>Bug report or stack trace</label>
-<textarea id="query">Traceback (most recent call last):
-  File "checkout.py", line 6, in checkout_total
-    return format_price(cart_total(items))
+<textarea id="query">When I add an item to the cart, the total price becomes blank and checkout fails.
+Traceback (most recent call last):
+  File "cart_api.py", line 6, in checkout
+    return {"total": format_price(cart_total(items))}
   File "pricing.py", line 2, in format_price
     return f"${amount:.2f}"
 TypeError: unsupported format string passed to NoneType</textarea>
+<label>1 · Screenshot of the bug (optional, ≤5 MB PNG/JPEG/GIF/WebP)</label>
+<input type="file" id="shot" accept="image/png,image/jpeg,image/gif,image/webp">
+<img id="preview" alt="screenshot preview" style="display:none;max-width:100%;border:1px solid var(--line);border-radius:8px;margin-top:6px">
+<label>2 · Browser console log (optional)</label>
+<textarea id="console_log" style="min-height:60px" placeholder="TypeError: Cannot read properties of null ...">TypeError: unsupported format string passed to NoneType (cart total was blank)</textarea>
+<label>3 · Network log (optional; never paste Authorization/Cookie headers)</label>
+<textarea id="network_log" style="min-height:50px" placeholder="GET /api/cart -> 500">GET /api/checkout -> 500</textarea>
 <label class="row" style="text-transform:none;letter-spacing:0"><input type="checkbox" id="tests" style="width:auto"> Run targeted existing tests — <b>this executes repository code with your privileges; it is not sandboxed. Only enable for repos you trust.</b></label>
 <button id="go">Investigate</button>
 <p class="small">Deterministic tools first: git/file/symbol search, AST detectors, import/call graph, BM25. Meta Model API is used only for final synthesis when <code>MODEL_API_KEY</code> is set server-side. Investigation never modifies the repo; patches are proposed diffs only.</p>
@@ -48,9 +56,11 @@ TypeError: unsupported format string passed to NoneType</textarea>
 </aside>
 <section>
 <div class="card"><h3>Evidence Graph — click a node for source</h3><svg id="graph" viewBox="0 0 900 300"></svg><div id="src"></div></div>
+<div class="card" id="visualcard" style="display:none"><h3>Visual analysis (screenshot = Level 1 evidence only)</h3><div id="visual"></div></div>
 <div id="hyps"></div>
 <div class="card"><h3>Report</h3><pre id="report">Submit an investigation to see the evidence-backed report.</pre></div>
 <div class="card" id="patchcard" style="display:none"><h3>Proposed patch (not applied)</h3><pre id="patch"></pre></div>
+<div class="card" id="regcard" style="display:none"><h3>Suggested regression test (not applied, not run)</h3><pre id="regtest"></pre></div>
 </section></main>
 <script>
 const $=id=>document.getElementById(id);
@@ -61,13 +71,22 @@ let result=null, graphNodes=[];
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function showSource(file,line){if(!result)return;const e=result.evidence.find(x=>x.file===file&&x.start<=line&&x.end>=line)||result.evidence.find(x=>x.file===file);
  $('src').innerHTML=e?`<pre>${esc(e.file)}:${e.start}-${e.end} [${e.kind}] ${esc(e.label)}\n${esc(e.text)}</pre>`:`<pre>No recorded evidence snippet for ${esc(file)}.</pre>`;}
+let shotB64=null;
+$('shot').addEventListener('change',()=>{const f=$('shot').files[0];if(!f)return;
+ if(f.size>5*1024*1024){alert('Screenshot exceeds 5 MB');$('shot').value='';return;}
+ const rd=new FileReader();rd.onload=()=>{shotB64=rd.result;$('preview').src=rd.result;$('preview').style.display='block';};rd.readAsDataURL(f);});
 $('go').onclick=async()=>{$('go').disabled=true;$('stat').textContent='investigating…';
  const wantTests=$('tests').checked;
  if(wantTests && !confirm('Run tests in this repository?\n\nThis EXECUTES code from:\n'+$('repo').value+'\n\nIt runs with your user privileges and is NOT sandboxed. Only continue for a repository you trust.')){
    $('tests').checked=false;$('go').disabled=false;$('stat').textContent='test execution not confirmed — investigation cancelled';return;}
- try{const r=await fetch('/api/investigate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo:$('repo').value,query:$('query').value,run_tests:wantTests,test_execution_confirmed:wantTests})});
+ try{const r=await fetch('/api/investigate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo:$('repo').value,query:$('query').value,run_tests:wantTests,test_execution_confirmed:wantTests,screenshot_b64:shotB64,console_log:$('console_log').value,network_log:$('network_log').value})});
  result=await r.json();if(result.error){$('report').innerHTML='<span class=err>'+esc(result.error)+'</span>';return;}
- $('stat').textContent=`status: ${result.status} · ${result.files_indexed} files indexed, ${result.files_skipped} skipped · ${result.latency_s}s · citations ${result.verification.citations_checked}/${result.verification.citations_total} valid`;
+ $('stat').textContent=`outcome: ${result.outcome} · ${result.files_indexed} files indexed, ${result.files_skipped} skipped · ${result.latency_s}s · citations ${result.verification.citations_checked}/${result.verification.citations_total} valid · levels ${Object.entries(result.evidence_levels).filter(([k,v])=>v).map(([k])=>k.split('_')[0]).join('+')}`;
+ if(result.visual){$('visualcard').style.display='block';const v=result.visual;
+  $('visual').innerHTML=`<div class="small">Source: ${esc(v.source)}${v.info?` · ${esc(v.info.mime)} ${v.info.width}×${v.info.height}`:''}</div>`
+  +v.observable.map(o=>`<div class="step">observable — ${esc(o)}</div>`).join('')
+  +v.inferred.map(o=>`<div class="step">inferred (not observed) — ${esc(o)}</div>`).join('')
+  +v.cannot_determine.map(o=>`<div class="step">cannot determine — ${esc(o)}</div>`).join('');}
  $('steps').innerHTML=result.steps.map(s=>`<div class="step"><b>${esc(s.step)}</b> — ${esc(s.detail)}</div>`).join('');
  $('testlog').innerHTML=result.test_log.length?result.test_log.map(t=>`<pre>$ ${esc(t.command)}\ncwd: ${esc(t.cwd)} · exit: ${t.exit_code}\n${esc(t.output)}</pre>`).join(''):'<span class="small">No tests were run.</span>';
  $('ledger').innerHTML=result.model.configured?(result.model.ledger.length?result.model.ledger.map(l=>`<div class="step">${esc(l.model)} · ${esc(l.purpose)} · ${l.latency_s}s · in ${l.input_tokens} / out ${l.output_tokens} tok · est $${l.est_cost_usd}</div>`).join(''):'<span class="small">Configured; no call was needed.</span>'):'<span class="small">Deterministic-only mode (no MODEL_API_KEY). $0 model spend.</span>';
@@ -78,6 +97,7 @@ $('go').onclick=async()=>{$('go').disabled=true;$('stat').textContent='investiga
  document.querySelectorAll('.ev').forEach(el=>el.addEventListener('click',()=>showSource(el.dataset.file,Number(el.dataset.start))));
  drawGraph(result.graph);$('report').textContent=result.report+(result.model.synthesis?'\n\n--- Model synthesis (inference, citation-checked) ---\n'+result.model.synthesis.text:'');
  if(result.patch){$('patchcard').style.display='block';$('patch').textContent=result.patch.diff+'\n\n'+result.patch.note;}else $('patchcard').style.display='none';
+ if(result.regression_test){$('regcard').style.display='block';$('regtest').textContent=result.regression_test.code;}else $('regcard').style.display='none';
  }finally{$('go').disabled=false;}};
 function drawGraph(g){const svg=$('graph');const pos={};const kinds={symptom:0,file:1,hypothesis:2,test:3};
  graphNodes=g.nodes;
