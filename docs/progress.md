@@ -110,3 +110,16 @@
   in a temp copy (tests pass there; original never modified).
 - **Live Meta inference remains UNVERIFIED** (no key in environment);
   multimodal path is stub-tested only. Exact live-check steps in README.
+
+## 2026-10-31 — Live Meta verification (user supplied MODEL_API_KEY in .env)
+- Server now loads a project-root `.env` (stdlib, env wins, values never
+  logged; `.env` is gitignored and untracked).
+- **Live text call succeeded:** `muse-spark-1.3`, 1.8s, $0.0013.
+- **Live full investigation on demo_webapp + real screenshot succeeded:**
+  visual-analysis (real observations of the blank total / missing gift
+  price / failure banner + explicit cannot-determine list), synthesis,
+  total ~$0.019, outcome `verified`, L1–L5 all true, H1 `cart.py`
+  confirmed-by-test. A ranking defect found by this run (visual terms
+  promoted `catalog.py` dict_get over the None producer) was fixed with
+  error-text-based scoring; suite still 32 passed, benchmarks unchanged.
+- Total live spend during verification: ~$0.04.

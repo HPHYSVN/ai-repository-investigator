@@ -16,6 +16,18 @@ from .model_adapter import MetaAdapter
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def load_dotenv():
+    """Load KEY=VALUE pairs from a project-root .env into the process env
+    (existing environment wins). Values are never logged. .env is gitignored."""
+    path = os.path.join(ROOT, ".env")
+    if not os.path.isfile(path):
+        return
+    for line in open(path, encoding="utf-8", errors="ignore"):
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 MAX_QUERY_CHARS = 20_000
 
 def validate_investigate_request(req):
@@ -105,6 +117,7 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, json.dumps(result))
 
 def main(port=8765):
+    load_dotenv()
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     print(f"AI Repository Investigator on http://127.0.0.1:{port}  (Ctrl+C to stop)")
     srv.serve_forever()

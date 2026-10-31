@@ -27,3 +27,5 @@ build/
 # logs / local artifacts
 *.log
 .DS_Store
+
+.vscode/

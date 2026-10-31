@@ -22,7 +22,7 @@
         "cart.py"
       ],
       "hypotheses": 1,
-      "latency_s": 0.459,
+      "latency_s": 0.51,
       "test_exits": [
         1
       ]
@@ -38,7 +38,7 @@
         "render.js"
       ],
       "hypotheses": 1,
-      "latency_s": 0.456,
+      "latency_s": 0.498,
       "test_exits": [
         0
       ]
@@ -54,7 +54,7 @@
         "client.py"
       ],
       "hypotheses": 1,
-      "latency_s": 0.459,
+      "latency_s": 0.497,
       "test_exits": [
         1
       ]
@@ -70,7 +70,7 @@
         "ui.py"
       ],
       "hypotheses": 1,
-      "latency_s": 0.466,
+      "latency_s": 0.519,
       "test_exits": [
         1
       ]
@@ -86,7 +86,7 @@
         "label.py"
       ],
       "hypotheses": 1,
-      "latency_s": 0.449,
+      "latency_s": 0.504,
       "test_exits": [
         1
       ]
@@ -102,7 +102,7 @@
         "checkout.py"
       ],
       "hypotheses": 1,
-      "latency_s": 0.515,
+      "latency_s": 0.546,
       "test_exits": [
         2
       ]
@@ -118,7 +118,7 @@
         "shipping.py"
       ],
       "hypotheses": 1,
-      "latency_s": 0.456,
+      "latency_s": 0.505,
       "test_exits": [
         1
       ]
@@ -134,7 +134,7 @@
         "client.py"
       ],
       "hypotheses": 1,
-      "latency_s": 0.482,
+      "latency_s": 0.526,
       "test_exits": [
         1
       ]
@@ -150,7 +150,7 @@
         "parser.py"
       ],
       "hypotheses": 2,
-      "latency_s": 0.457,
+      "latency_s": 0.507,
       "test_exits": [
         1
       ]
@@ -164,7 +164,7 @@
       "outcome": "inconclusive",
       "top_files": [],
       "hypotheses": 1,
-      "latency_s": 0.458,
+      "latency_s": 0.503,
       "test_exits": [
         0
       ]

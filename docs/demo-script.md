@@ -28,9 +28,10 @@ pytest exit 1, proposed patch applied in a temp copy makes tests pass.
 6. **Fix (20s).** Proposed diff (explicit `ValueError` instead of silent
    `None`) — *not applied*; suggested regression test shown separately.
    Mention: applied in a temp copy during development, tests passed there.
-7. **Close (10s).** "What Meta does: vision + synthesis. What deterministic
-   tools do: everything that must be provable. What we cannot claim:
-   live Meta is unverified until a key is set — the UI says so."
+7. **Close (10s).** "What Meta does: vision + synthesis (live-verified
+   2026-10-31, ~$0.02 per investigation). What deterministic tools do:
+   everything that must be provable. What a screenshot alone can never do:
+   name the guilty line — the code and the test earn that."
 
 ## Fallbacks
 - No network/key: the whole flow above runs deterministically; say so.

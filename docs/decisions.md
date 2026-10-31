@@ -80,3 +80,12 @@ Format: dated, ADR-style. `Confirmed` = verified fact or explicit user instructi
   in the environment was deliberately NOT substituted for the Meta key.
 - **Decision:** No browser extension, no DOM-to-source claims, no
   auto-applied patches. Screenshot = Level-1 evidence only.
+
+## 2026-10-31 — Live Meta verified; .env loading
+- **Confirmed (live):** Real `MODEL_API_KEY` calls succeed for text and
+  image understanding on `muse-spark-1.3`; full demo investigation ends
+  `verified` at ~$0.019/investigation. Earlier "unverified" statements in
+  git history were accurate at the time and are superseded by this entry.
+- **Decision:** Server loads `.env` at startup (existing env takes
+  precedence; values never logged) so `python3 run.py` works with the
+  documented setup. `.env` remains gitignored.

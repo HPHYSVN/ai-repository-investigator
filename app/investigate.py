@@ -393,6 +393,12 @@ def run_investigation(repo_path, query, run_tests=False, adapter=None,
                 s -= 4  # crash site itself is less likely the root cause
         if h["type"] in ("config_mismatch", "none_return"):
             s += 2
+        # Error-text evidence: a NoneType failure implicates None producers
+        # more directly than a generic .get() (which merely feeds one).
+        if h["type"] == "none_return" and "NoneType" in (combined or ""):
+            s += 4
+        if h["type"] == "missing_conversion" and "concatenate" in (combined or ""):
+            s += 4
         return s
     det_hits.sort(key=hit_score, reverse=True)
 

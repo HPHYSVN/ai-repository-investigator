@@ -84,14 +84,16 @@ image content). Caps: `INVESTIGATOR_MAX_MODEL_CALLS` (2),
 `INVESTIGATOR_BUDGET_USD` (1.00); 429 backoff; usage/cost ledger in the UI.
 Secrets are redacted from logs and evidence before any model call.
 
-> **Live Meta inference status: UNVERIFIED in this environment.** No real
-> `MODEL_API_KEY` was available during development, so no live Meta request
-> (text or image) has been made. The full request/response path, including
-> multimodal payloads, is covered by tests against a local stub of the
-> documented API (`tests/test_model_adapter_http.py`, `tests/test_visual.py`).
-> To verify live: set `MODEL_API_KEY`, start the app, upload
-> `demo_webapp/screenshot.png`, and confirm the Visual panel source reads
-> `meta:muse-spark-1.3` and the ledger shows a `visual-analysis` call.
+> **Live Meta inference status: VERIFIED on 2026-10-31.** With a real
+> `MODEL_API_KEY` (loaded from a local, gitignored `.env`): a text request
+> returned successfully, and a full demo investigation ran both live calls —
+> `visual-analysis` on `demo_webapp/screenshot.png` (731 in / ~1,600 out
+> tokens; the model correctly observed the blank Total, the "—" gift-box
+> price, and the checkout-failure banner, and listed what it could not
+> determine) and `synthesis` (~$0.019 total for the investigation) —
+> ending at outcome `verified` with evidence levels L1–L5 all satisfied.
+> Stub-based tests (`tests/test_model_adapter_http.py`, `tests/test_visual.py`)
+> still cover the same paths without a key or spend.
 
 ## Benchmarks (measured, synthetic fixtures, $0 model spend)
 
@@ -132,7 +134,8 @@ live outside the indexed fixtures; fixtures run from temp copies.
 - Detectors are heuristics — expect false leads and `inconclusive` on large
   real repos. Dependency paths are graph reachability, not runtime traces.
 - No browser extension, DOM-to-source mapping, video, or auto-applied fixes.
-- Live Meta inference is unverified (see above).
+- Live Meta inference was verified on 2026-10-31 (see above); behaviour
+  without a key is the deterministic degraded mode.
 
 ## Layout & docs
 
